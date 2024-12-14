@@ -27,17 +27,17 @@ def start_keyboard_bot():
     print("""
         +---------------------------------------------+
         |                                             |
-        |   \x1B[32mRocket League drop opener\x1B[0m                 |
+        |   Rocket League drop opener                 |
         |                                             |
         |   Please navigate to:                       |
         |     Main Menu > Garage > Manage Inventory > |
         |     Reward Items                            |
         |                                             |
-        |   \x1B[31mWARNING: This bot will auto equip items\x1B[0m   |
+        |   WARNING: This bot will auto equip items   |
         |                                             |
         +---------------------------------------------+
                 """)
-    input("\x1B[33mOnce you are there, press Enter to continue...\x1B[0m")
+    input("Once you are there, press Enter to continue...")
     while True:
         # Check if Rocket League is running
         if not is_rocket_league_running():
@@ -51,8 +51,6 @@ def start_keyboard_bot():
             time.sleep(5)  # Wait for 5 seconds before checking again
             continue
 
-        # Notify user to navigate to the correct menu
-
         # Countdown before starting the bot
         print("Starting bot in:")
         for i in range(5, 0, -1):
@@ -62,29 +60,26 @@ def start_keyboard_bot():
         # Emulate keyboard inputs
         while True:
             time.sleep(0.1)
-            keyboard.press('a')  # Press the 'A' key
-            print("Pressing A")
+            keyboard.tap(Key.left)
+            print("Pressing left")
             time.sleep(0.1)
-            keyboard.release('a')
+            keyboard.tap(Key.left)
+            print("Pressing left")
             time.sleep(0.1)
-
-            keyboard.press(Key.left)  # Press the left arrow key
-            print("Pressing Left")
+            keyboard.tap(Key.enter)
+            print("Pressing enter")
             time.sleep(0.1)
-            keyboard.release(Key.left)
+            keyboard.tap(Key.left)
+            print("Pressing left")
             time.sleep(0.1)
-
-            keyboard.press('a')  # Press the 'A' key again
-            print("Pressing A")
+            keyboard.tap(Key.enter)
+            print("Pressing enter")
             time.sleep(0.1)
-            keyboard.release('a')
+            keyboard.tap(Key.esc)
+            print("Pressing escape")
             time.sleep(0.1)
-
-            keyboard.press(Key.esc)  # Press the 'ESC' key
-            print("Pressing ESC")
-            time.sleep(0.1)
-            keyboard.release(Key.esc)
-            time.sleep(0.1)
+            keyboard.tap(Key.enter)
+            print("Pressing enter")
 
 if __name__ == '__main__':
     start_keyboard_bot()
