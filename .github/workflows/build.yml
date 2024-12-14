@@ -26,9 +26,9 @@ jobs:
 
     - name: Build Executable
       run: |
-        pyinstaller --onefile your_script.py
+        pyinstaller --onefile --name rl_drop_opener main.py
         mkdir build_artifacts
-        move dist\your_script.exe build_artifacts\your_script.exe
+        move dist\rl_drop_opener.exe build_artifacts\rl_drop_opener.exe
 
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
