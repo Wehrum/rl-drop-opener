@@ -22,7 +22,7 @@ saving you from having to do it yourself.
 
 For an easy to use/no setup nesseary approach, I created a release build of this project.
 
-You can download the latest release [here](https://github.com/Wehrum/rl-drop-opener/releases/download/v0.1/rl_drop_opener.exe)
+You can download the latest release [here](https://github.com/Wehrum/rl-drop-opener/releases/tag/v0.1.0)
 
 Simply run the `.exe` and follow the prompts.
 
