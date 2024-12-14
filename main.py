@@ -1,8 +1,7 @@
 import time
 import psutil
-from pynput.keyboard import Controller, Key, Listener
+from pynput.keyboard import Controller, Key
 import pygetwindow as gw
-import threading
 
 keyboard = Controller()
 
