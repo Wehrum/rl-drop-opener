@@ -96,6 +96,7 @@ jobs:
       with:
         files: build_artifacts/rl_drop_opener.exe
         tag_name: ${{ env.new_tag }}
+        generate_release_notes: true
         body: ${{ needs.build-and-publish.outputs.checksum }}
         # note you'll typically need to create a personal access token
         # with permissions to create releases in the other repo
