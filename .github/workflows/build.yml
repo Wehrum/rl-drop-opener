@@ -6,42 +6,64 @@ on:
       - main
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
+  build-and-publish:
+    runs-on: windows-latest
 
     steps:
+    # Step 1: Checkout code
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    # Step 2: Set up Python
     - name: Set Up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9' # Adjust based on your project needs
+        python-version: '3.9'
 
+    # Step 3: Install dependencies
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r requirements.txt
 
+    # Step 4: Build executable
     - name: Build Executable
       run: |
         pyinstaller --onefile --name rl_drop_opener main.py
         mkdir build_artifacts
-        move dist/rl_drop_opener.exe build_artifacts/rl_drop_opener.exe
+        move dist\rl_drop_opener.exe build_artifacts\rl_drop_opener.exe
 
-    - name: Generate Checksum
+    # Step 5: Generate SHA256 Checksum
+    - name: Generate SHA256 Checksum
+      id: checksum
       run: |
-        certutil -hashfile build_artifacts/rl_drop_opener.exe SHA256 > build_artifacts/checksum.txt
-        echo "Checksum generated."
+        $checksum = CertUtil -hashfile build_artifacts\rl_drop_opener.exe SHA256 | Select-String -Pattern "^[A-F0-9]{64}$"
+        echo "checksum=$checksum" >> $env:GITHUB_OUTPUT
+      shell: pwsh
 
-    - name: Upload Executable and Checksum
+    # Step 6: Upload artifact for debugging (optional)
+    - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: precompiled-executable
+        name: build-artifacts
         path: build_artifacts/
 
-   # Step 3: Determine the Next Version Tag
+  release:
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+        path: build_artifacts/
+
     - name: Get Latest Tag
       id: get_latest_tag
       uses: actions/github-script@v6
@@ -56,7 +78,6 @@ jobs:
           if (tags.data.length === 0) return "v0.1.0"; // Default for first release
           return tags.data[0].name;
         result-encoding: string
-
 
     - name: Increment Tag Version
       id: increment_tag
