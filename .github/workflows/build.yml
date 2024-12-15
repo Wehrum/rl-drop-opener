@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-publish:
     runs-on: windows-latest
+    outputs:
+      checksum: ${{ steps.checksum.outputs.checksum }}  # Export the checksum
 
     steps:
     # Step 1: Checkout code
@@ -39,7 +41,7 @@ jobs:
       id: checksum
       run: |
         $checksum = CertUtil -hashfile build_artifacts\rl_drop_opener.exe SHA256 | Select-String -Pattern "^[A-F0-9]{64}$"
-        echo "checksum=$checksum" >> $env:GITHUB_OUTPUT
+        echo "::set-output name=checksum::$(echo $checksum | sed 's/\r//g')"  # Remove any carriage returns
       shell: pwsh
 
     # Step 6: Upload artifact for debugging (optional)
