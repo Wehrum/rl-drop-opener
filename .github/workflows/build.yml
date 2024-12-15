@@ -6,67 +6,42 @@ on:
       - main
 
 jobs:
-  build-and-publish:
-    runs-on: windows-latest
+  build-and-release:
+    runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout code
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # Step 2: Set up Python
     - name: Set Up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.9' # Adjust based on your project needs
 
-    # Step 3: Install dependencies
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r requirements.txt
 
-    # Step 4: Build executable
     - name: Build Executable
       run: |
         pyinstaller --onefile --name rl_drop_opener main.py
         mkdir build_artifacts
-        move dist\rl_drop_opener.exe build_artifacts\rl_drop_opener.exe
+        move dist/rl_drop_opener.exe build_artifacts/rl_drop_opener.exe
 
-    # Step 5: Generate SHA256 Checksum
-    - name: Generate SHA256 Checksum
-      id: checksum
+    - name: Generate Checksum
       run: |
-        $checksum = CertUtil -hashfile build_artifacts\rl_drop_opener.exe SHA256 | Select-String -Pattern "^[A-F0-9]{64}$"
-        echo "checksum=$checksum" >> $env:GITHUB_OUTPUT
-      shell: pwsh
+        certutil -hashfile build_artifacts/rl_drop_opener.exe SHA256 > build_artifacts/checksum.txt
+        echo "Checksum generated."
 
-    # Step 6: Upload artifact for debugging (optional)
-    - name: Upload Build Artifacts
+    - name: Upload Executable and Checksum
       uses: actions/upload-artifact@v4
       with:
-        name: build-artifacts
+        name: precompiled-executable
         path: build_artifacts/
 
-  release:
-    needs: build-and-publish
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-    # Step 1: Checkout code
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    # Step 2: Fetch the previous job's artifacts
-    - name: Download Build Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifacts
-        path: build_artifacts/
-
-    # Step 3: Determine the Next Version Tag
+   # Step 3: Determine the Next Version Tag
     - name: Get Latest Tag
       id: get_latest_tag
       uses: actions/github-script@v6
@@ -93,68 +68,13 @@ jobs:
         new_version="$prefix$major.$minor.$((patch + 1))"
         echo "new_tag=$new_version" >> $GITHUB_ENV
 
-    # Step 4: Create a New Git Tag
-    - name: Create Tag
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git tag ${{ env.new_tag }}
-        git push origin ${{ env.new_tag }}
-
-    # Step 5: Generate Commit History
-    - name: Generate Commit History
-      id: commit_history
-      uses: actions/github-script@v6
+    - name: Create Release with New Tag
+      uses: marvinpinto/action-automatic-releases@latest
       with:
-        script: |
-          const commits = await github.repos.listCommits({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            sha: context.sha,
-          });
-          const commitMessages = commits.data.map(commit => 
-            `- [${commit.sha.substring(0, 7)}](${commit.html_url}) ${commit.commit.message}`
-          ).join("\n");
-          return commitMessages;
-        result-encoding: string
-
-    # Step 6: Create GitHub Release with New Tag
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const release = await github.repos.createRelease({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            tag_name: process.env.new_tag,
-            name: `Release ${process.env.new_tag}`,
-            body: `
-            ## Release Details
-            This release includes the compiled executable.
-
-            **Filename**: \`rl_drop_opener.exe\`  
-            **SHA256 Checksum**: \`${{ needs.build-and-publish.outputs.checksum }}\`
-
-            ## Commits in this Release
-            ${{ steps.commit_history.outputs.result }}
-
-            Use the above checksum to verify the integrity of the executable.
-            `,
-            draft: false,
-            prerelease: false,
-          });
-          return release.upload_url;
-        result-encoding: string
-
-    # Step 7: Install `gh` CLI
-    - name: Install GitHub CLI
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gh
-        gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
-
-    # Step 8: Upload Executable to Release
-    - name: Upload Executable to Release
-      run: |
-        gh release upload ${{ env.new_tag }} build_artifacts/rl_drop_opener.exe --clobber
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        prerelease: false
+        automatic_release_tag: ${{ env.new_tag }}
+        title: "Release ${{ steps.get_version.outputs.result }}"
+        files: |
+          build_artifacts/rl_drop_opener.exe
+          build_artifacts/checksum.txt
