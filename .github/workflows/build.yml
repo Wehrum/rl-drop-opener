@@ -1,4 +1,4 @@
-name: Build and Publish Executable
+name: Build, Verify, and Publish Executable
 
 on:
   push:
@@ -6,32 +6,143 @@ on:
       - main
 
 jobs:
-  build-exe:
+  build-and-publish:
     runs-on: windows-latest
 
     steps:
+    # Step 1: Checkout code
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    # Step 2: Set up Python
     - name: Set Up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9' # Adjust based on your project needs
+        python-version: '3.9'
 
+    # Step 3: Install dependencies
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r requirements.txt
 
+    # Step 4: Build executable
     - name: Build Executable
       run: |
         pyinstaller --onefile --name rl_drop_opener main.py
         mkdir build_artifacts
         move dist\rl_drop_opener.exe build_artifacts\rl_drop_opener.exe
 
-    - name: Upload Executable Artifact
+    # Step 5: Generate SHA256 Checksum and Save as Output
+    - name: Generate SHA256 Checksum
+      id: checksum
+      run: |
+        $checksum = CertUtil -hashfile build_artifacts\rl_drop_opener.exe SHA256 | Select-String -Pattern "^[A-F0-9]{64}$"
+        echo "checksum=$checksum" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+
+    # Step 6: Upload artifact for debugging (optional)
+    - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: precompiled-executable
+        name: build-artifacts
         path: build_artifacts/
+
+  release:
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    # Step 1: Checkout code
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # Step 2: Fetch the previous job's artifacts
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+        path: build_artifacts/
+
+    # Step 3: Determine the Next Version Tag
+    - name: Get Latest Tag
+      id: get_latest_tag
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const tags = await github.repos.listTags({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          if (tags.data.length === 0) return "v0.1.0"; // Default for first release
+          return tags.data[0].name;
+        result-encoding: string
+
+    - name: Increment Tag Version
+      id: increment_tag
+      run: |
+        latest_tag=${{ steps.get_latest_tag.outputs.result }}
+        prefix="v"
+        version=${latest_tag#"$prefix"}
+        IFS='.' read -r major minor patch <<< "$version"
+        new_version="$prefix$major.$minor.$((patch + 1))"
+        echo "new_tag=$new_version" >> $GITHUB_ENV
+
+    # Step 4: Create a New Git Tag
+    - name: Create Tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag ${{ env.new_tag }}
+        git push origin ${{ env.new_tag }}
+
+    # Step 5: Generate Commit History
+    - name: Generate Commit History
+      id: commit_history
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const commits = await github.repos.listCommits({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            sha: context.sha,
+          });
+          const commitMessages = commits.data.map(commit => 
+            `- [${commit.sha.substring(0, 7)}](${commit.html_url}) ${commit.commit.message}`
+          ).join("\n");
+          return commitMessages;
+        result-encoding: string
+
+    # Step 6: Create GitHub Release with New Tag
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ env.new_tag }}
+        release_name: Release ${{ env.new_tag }}
+        body: |
+          ## Release Details
+          This release includes the compiled executable.
+
+          **Filename**: `rl_drop_opener.exe`  
+          **SHA256 Checksum**: `${{ needs.build-and-publish.outputs.checksum }}`
+
+          ## Commits in this Release
+          ${{ steps.commit_history.outputs.result }}
+
+          Use the above checksum to verify the integrity of the executable.
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # Step 7: Upload Executable to Release
+    - name: Upload Executable to Release
+      uses: actions/upload-release-asset@v2
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build_artifacts/rl_drop_opener.exe
+        asset_name: rl_drop_opener.exe
+        asset_content_type: application/octet-stream
