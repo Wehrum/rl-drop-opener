@@ -54,6 +54,7 @@ def start_keyboard_bot():
         while True:
             if not is_window_in_focus():
                 print("Rocket League is not the active window. Please focus on the game.")
+                print("Or close the program if you are done with drops :)")
                 time.sleep(5)  # Wait for 5 seconds before checking again
             else:
                 time.sleep(0.1)
