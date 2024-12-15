@@ -34,7 +34,7 @@ jobs:
         mkdir build_artifacts
         move dist\rl_drop_opener.exe build_artifacts\rl_drop_opener.exe
 
-    # Step 5: Generate SHA256 Checksum and Save as Output
+    # Step 5: Generate SHA256 Checksum
     - name: Generate SHA256 Checksum
       id: checksum
       run: |
@@ -146,9 +146,10 @@ jobs:
 
     # Step 7: Install `gh` CLI
     - name: Install GitHub CLI
-      uses: actions/setup-gh@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gh
+        gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
 
     # Step 8: Upload Executable to Release
     - name: Upload Executable to Release
