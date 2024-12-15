@@ -118,31 +118,39 @@ jobs:
     # Step 6: Create GitHub Release with New Tag
     - name: Create GitHub Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: actions/github-script@v6
       with:
-        tag_name: ${{ env.new_tag }}
-        release_name: Release ${{ env.new_tag }}
-        body: |
-          ## Release Details
-          This release includes the compiled executable.
+        script: |
+          const release = await github.repos.createRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag_name: process.env.new_tag,
+            name: `Release ${process.env.new_tag}`,
+            body: `
+            ## Release Details
+            This release includes the compiled executable.
 
-          **Filename**: `rl_drop_opener.exe`  
-          **SHA256 Checksum**: `${{ needs.build-and-publish.outputs.checksum }}`
+            **Filename**: \`rl_drop_opener.exe\`  
+            **SHA256 Checksum**: \`${{ needs.build-and-publish.outputs.checksum }}\`
 
-          ## Commits in this Release
-          ${{ steps.commit_history.outputs.result }}
+            ## Commits in this Release
+            ${{ steps.commit_history.outputs.result }}
 
-          Use the above checksum to verify the integrity of the executable.
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            Use the above checksum to verify the integrity of the executable.
+            `,
+            draft: false,
+            prerelease: false,
+          });
+          return release.upload_url;
+        result-encoding: string
 
-    # Step 7: Upload Executable to Release
+    # Step 7: Install `gh` CLI
+    - name: Install GitHub CLI
+      uses: actions/setup-gh@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    # Step 8: Upload Executable to Release
     - name: Upload Executable to Release
-      uses: actions/upload-release-asset@v2
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: build_artifacts/rl_drop_opener.exe
-        asset_name: rl_drop_opener.exe
-        asset_content_type: application/octet-stream
+      run: |
+        gh release upload ${{ env.new_tag }} build_artifacts/rl_drop_opener.exe --clobber
