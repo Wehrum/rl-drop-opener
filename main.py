@@ -44,12 +44,6 @@ def start_keyboard_bot():
             time.sleep(5)  # Wait for 5 seconds before checking again
             continue
 
-        # Check if Rocket League is in focus
-        if not is_window_in_focus():
-            print("Rocket League is not the active window. Please focus on the game.")
-            time.sleep(5)  # Wait for 5 seconds before checking again
-            continue
-
         # Countdown before starting the bot
         print("Starting bot in:")
         for i in range(5, 0, -1):
@@ -58,27 +52,32 @@ def start_keyboard_bot():
 
         # Emulate keyboard inputs
         while True:
-            time.sleep(0.1)
-            keyboard.tap(Key.left)
-            print("Pressing left")
-            time.sleep(0.1)
-            keyboard.tap(Key.left)
-            print("Pressing left")
-            time.sleep(0.1)
-            keyboard.tap(Key.enter)
-            print("Pressing enter")
-            time.sleep(0.1)
-            keyboard.tap(Key.left)
-            print("Pressing left")
-            time.sleep(0.1)
-            keyboard.tap(Key.enter)
-            print("Pressing enter")
-            time.sleep(0.1)
-            keyboard.tap(Key.esc)
-            print("Pressing escape")
-            time.sleep(0.1)
-            keyboard.tap(Key.enter)
-            print("Pressing enter")
+            if not is_window_in_focus():
+                print("Rocket League is not the active window. Please focus on the game.")
+                print("Or close the program if you are done with drops :)")
+                time.sleep(5)  # Wait for 5 seconds before checking again
+            else:
+                time.sleep(0.1)
+                keyboard.tap(Key.left)
+                print("Pressing left")
+                time.sleep(0.1)
+                keyboard.tap(Key.left)
+                print("Pressing left")
+                time.sleep(0.1)
+                keyboard.tap(Key.enter)
+                print("Pressing enter")
+                time.sleep(0.1)
+                keyboard.tap(Key.left)
+                print("Pressing left")
+                time.sleep(0.1)
+                keyboard.tap(Key.enter)
+                print("Pressing enter")
+                time.sleep(0.1)
+                keyboard.tap(Key.esc)
+                print("Pressing escape")
+                time.sleep(0.1)
+                keyboard.tap(Key.enter)
+                print("Pressing enter")
 
 if __name__ == '__main__':
     start_keyboard_bot()
