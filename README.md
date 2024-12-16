@@ -20,7 +20,7 @@ saving you from having to do it yourself.
 
 ### Downloading the release file
 
-For an easy to use/no setup nesear approach, I created a release build of this project.
+For an easy to use/no setup necessary approach, I created a release build of this project.
 
 You can download the latest release [here](https://github.com/Wehrum/rl-drop-opener/releases/tag/v0.1.0)
 
