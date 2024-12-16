@@ -1,13 +1,21 @@
-name: Build and Publish Executable
+name: Build, Verify, and Publish Executable
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'src/**'
 
 jobs:
-  build-exe:
+  build-and-publish:
     runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      NEW_TAG: ${{ steps.set-output.outputs.NEW_TAG }}
+      EXE_NAME: ${{ steps.set-output.outputs.EXE_NAME }}
+      CHECKSUM: ${{ steps.set-output.outputs.CHECKSUM }}
 
     steps:
     - name: Checkout Code
@@ -16,22 +24,99 @@ jobs:
     - name: Set Up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9' # Adjust based on your project needs
+        python-version: '3.9'
 
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-        pip install -r requirements.txt
+        pip install -r src\requirements.txt
+
+    - name: Get Latest Tag
+      id: get_latest_tag
+      run: |
+        $tags = (gh api repos/${{ github.repository }}/tags --paginate | ConvertFrom-Json | Select-Object -First 1)
+        if (-not $tags) {
+          $latest_tag = "v0.1.0"
+        } else {
+          $latest_tag = $tags.name
+        }
+        echo "LATEST_TAG=$latest_tag" | Out-File -FilePath $env:GITHUB_ENV -Append
+      shell: pwsh
+
+    - name: Increment Tag Version
+      id: increment_tag
+      run: |
+        $latest_tag = "${{ env.LATEST_TAG }}"
+        $prefix = "v"
+        $version = $latest_tag.TrimStart($prefix)
+        $version_parts = $version -split '\.'
+        $major = [int]$version_parts[0]
+        $minor = [int]$version_parts[1]
+        $patch = [int]$version_parts[2] + 1
+        $new_version = "$prefix$major.$minor.$patch"
+        echo "NEW_TAG=$new_version" | Out-File -FilePath $env:GITHUB_ENV -Append
+      shell: pwsh
+
+    - name: Set Executable Name
+      id: set_exe_name
+      run: |
+        $exe_name = "rl_drop_opener-${{ env.NEW_TAG }}-Windows"
+        echo "EXE_NAME=$exe_name" | Out-File -FilePath $env:GITHUB_ENV -Append
+      shell: pwsh
 
     - name: Build Executable
       run: |
-        pyinstaller --onefile --name rl_drop_opener main.py
+        pyinstaller --onefile --name ${{ env.EXE_NAME }} src\main.py
         mkdir build_artifacts
-        move dist\rl_drop_opener.exe build_artifacts\rl_drop_opener.exe
+        move dist\${{ env.EXE_NAME }}.exe build_artifacts\${{ env.EXE_NAME }}.exe
+      shell: pwsh
 
-    - name: Upload Executable Artifact
+    - name: Generate SHA256 Checksum
+      id: checksum
+      run: |
+        $checksum = CertUtil -hashfile build_artifacts\${{ env.EXE_NAME }}.exe SHA256 | Select-String -Pattern "^[A-F0-9]{64}$"
+        echo "CHECKSUM=$(echo $checksum | sed 's/\r//g')" | Out-File -FilePath $env:GITHUB_ENV -Append
+      shell: pwsh
+
+    - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: precompiled-executable
+        name: build-artifacts
         path: build_artifacts/
+
+    - name: Set outputs for next job
+      id: set-output
+      run: |
+        echo "NEW_TAG=${{ env.NEW_TAG }}" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+        echo "EXE_NAME=${{ env.EXE_NAME }}" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+        echo "CHECKSUM=${{ env.CHECKSUM }}" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+  release:
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+        path: build_artifacts/
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: rl-drop-opener-${{ needs.build-and-publish.outputs.NEW_TAG }}
+        files: build_artifacts/${{ needs.build-and-publish.outputs.EXE_NAME }}.exe
+        tag_name: ${{ needs.build-and-publish.outputs.NEW_TAG }}
+        generate_release_notes: true
+        body: |
+          ## Checksums
+          ```text
+          ${{ needs.build-and-publish.outputs.EXE_NAME }}.exe: ${{ needs.build-and-publish.outputs.CHECKSUM }}
+          ```
+        token: ${{ secrets.GITHUB_TOKEN }}
