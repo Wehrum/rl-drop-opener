@@ -110,7 +110,7 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
-        name: rl-drop-opener-${{ needs.build-and-publish.outputs.NEW_TAG }}
+        name: Rocket League Drop Opener ${{ needs.build-and-publish.outputs.NEW_TAG }}
         files: build_artifacts/${{ needs.build-and-publish.outputs.EXE_NAME }}.exe
         tag_name: ${{ needs.build-and-publish.outputs.NEW_TAG }}
         generate_release_notes: true
@@ -119,4 +119,6 @@ jobs:
           ```text
           ${{ needs.build-and-publish.outputs.EXE_NAME }}.exe: ${{ needs.build-and-publish.outputs.CHECKSUM }}
           ```
+          Currently, this only supports Windows systems.
+          If you would like multi-platform support, please create an issue.
         token: ${{ secrets.GITHUB_TOKEN }}

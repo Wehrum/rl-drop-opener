@@ -41,6 +41,7 @@ def start_keyboard_bot():
         # Check if Rocket League is running
         if not is_rocket_league_running():
             print("Rocket League is not running. Waiting...")
+            print("Please launch the game and navigate to Main Menu > Garage > Manage Inventory > Reward Items")
             time.sleep(5)  # Wait for 5 seconds before checking again
             continue
 
