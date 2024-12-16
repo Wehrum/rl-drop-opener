@@ -5,7 +5,7 @@ import pygetwindow as gw
 
 keyboard = Controller()
 
-# Function to check if Rocket League is running
+# Check if Rocket League is running
 def is_rocket_league_running():
     for process in psutil.process_iter(['name']):
         try:
@@ -15,7 +15,7 @@ def is_rocket_league_running():
             pass
     return False
 
-# Function to check if Rocket League is the active window
+# Check if Rocket League is the active window
 def is_window_in_focus(window_title="Rocket League"):
     active_window = gw.getActiveWindow()
     if active_window and window_title.lower() in active_window.title.lower():
