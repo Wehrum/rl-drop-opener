@@ -26,7 +26,7 @@ def start_keyboard_bot():
     print("""
         +---------------------------------------------+
         |                                             |
-        |   Rocket League drop opener                 |
+        |   Rocket League drop opener      hi           |
         |                                             |
         |   Please navigate to:                       |
         |     Main Menu > Garage > Manage Inventory > |
